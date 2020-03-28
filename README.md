@@ -6,7 +6,7 @@ An unofficial Instagram SDK for Python
 pip install pygram
 ```
 
-## Methods without account
+## Methods without mandatory login
 ### Get user's profile
 ```python
 from pygram import PyGram
@@ -43,7 +43,7 @@ for comment in comments:
     print(comment)
 ```
 
-## Methods with account
+## Methods with mandatory login
 ### Login
 ```python
 from pygram import PyGram
