@@ -8,7 +8,7 @@ import pygram
 setup(
     name='pygram',
     version=pygram.__version__,
-    description='A Python Instagram SDK',
+    description='An unofficial Instagram SDK for Python',
     url='https://github.com/brunneis/pygram',
     author='Rodrigo Martínez Castaño',
     author_email='rodrigo@martinez.gal',
@@ -25,4 +25,5 @@ setup(
         "Programming Language :: Python :: Implementation :: PyPy",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
+    python_requires=">=3.6",
     install_requires=[''])  # Dependencies
