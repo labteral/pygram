@@ -1,6 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import json
+import requests
+from .errors import ActionError
+
+
+def get_json_from_url(url, method, data=None, headers=None):
+    try:
+        result = getattr(requests, method)(url, data=data, headers=headers)
+        result_dict = result.json()
+        return result_dict
+    except json.decoder.JSONDecodeError:
+        raise ActionError(f'[{method.upper()}] {url}')
 
 
 def stringify(input_dict):
@@ -21,18 +32,20 @@ def clean_dict(item, keys):
             first_subkey = subkeys[0]
             if first_subkey not in item:
                 continue
-
             new_item[key_name] = item[first_subkey]
             if len(subkeys) > 1:
                 for subkey in subkeys[1:]:
-                    new_item[key_name] = new_item[key_name][subkey]
-
+                    try:
+                        new_item[key_name] = new_item[key_name][subkey]
+                    except Exception:
+                        pass
     return new_item
 
 
 def clean_dicts(items, keys):
     for item in items:
         yield clean_dict(item, keys)
+
 
 def is_a_post(publication):
     return 'shortcode' in publication

@@ -12,3 +12,11 @@ class AuthenticationError(Exception):
 
 class NotSupportedError(Exception):
     pass
+
+
+class ActionError(Exception):
+    pass
+
+
+class UnknownError(Exception):
+    pass

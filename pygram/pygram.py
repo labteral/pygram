@@ -5,8 +5,10 @@ import requests
 import json
 import time
 
-from .helper import stringify, clean_dict, clean_dicts, is_a_post
-from .errors import NotLoggedInError, AuthenticationError, NotSupportedError
+from .helper import (get_json_from_url, stringify, clean_dict, clean_dicts,
+                     is_a_post)
+from .errors import (NotLoggedInError, AuthenticationError, NotSupportedError,
+                     UnknownError)
 
 
 class PyGram:
@@ -22,22 +24,22 @@ class PyGram:
                  user=None,
                  password=None,
                  sleep_seconds_between_iterative_requests=0):
+        self.user = user
+        self.sleep_seconds_between_iterative_requests = sleep_seconds_between_iterative_requests
+        self.known_user_ids = {}
         self.logged_in = False
         self.headers = None
 
         if user and password:
             self._login(user, password)
 
-        self.sleep_seconds_between_iterative_requests = sleep_seconds_between_iterative_requests
-        self.known_user_ids = {}
-
     def like(self, publication):
-        if 'shortcode' in publication:
+        if is_a_post(publication):
             return self._manage_like('post', publication, 'like')
         return self._manage_like('comment', publication, 'like')
 
     def unlike(self, publication):
-        if 'shortcode' in publication:
+        if is_a_post(publication):
             return self._manage_like('post', publication, 'unlike')
         return self._manage_like('comment', publication, 'unlike')
 
@@ -49,7 +51,7 @@ class PyGram:
             publication_id = publication['post_id']
             data['replied_to_comment_id'] = publication['id']
         url = f"{PyGram._endpoints['web']}comments/{publication_id}/add/"
-        requests.post(url, data=data, headers=self.headers).json()
+        get_json_from_url(url, 'post', data=data, headers=self.headers)
 
     def delete(self, publication):
         if is_a_post(publication):
@@ -60,7 +62,7 @@ class PyGram:
             publication_id = publication['post_id']
             comment_id = f"{publication['id']}/"
         url = f"{PyGram._endpoints['web']}comments/{publication_id}/delete/{comment_id}"
-        requests.post(url, headers=self.headers).json()
+        get_json_from_url(url, 'post', headers=self.headers)
 
     def get_user_id(self, user):
         if user in self.known_user_ids:
@@ -73,7 +75,7 @@ class PyGram:
     @staticmethod
     def get_profile(user):
         url = f'https://www.instagram.com/{user}/?__a=1'
-        profile = requests.get(url).json()['graphql']['user']
+        profile = get_json_from_url(url, 'get')['graphql']['user']
         cleaned_profile = clean_dict(profile, [
             'id', 'username', 'full_name', 'profile_pic_url',
             'profile_pic_url_hd', 'is_private', 'is_verified', 'biography',
@@ -154,15 +156,44 @@ class PyGram:
     def _load_cached_headers(self):
         try:
             with open(PyGram.HEADERS_CACHE_FILE, 'r') as input_file:
-                self.headers = json.load(input_file)
-                self.logged_in = True
-                return True
+                cache = json.load(input_file)
+                if cache['user'] != self.user:
+                    return False
+                self.headers = cache['headers']
+                try:
+                    self.logged_in = True
+                    next(self.get_followers('instagram', limit=1))
+                    return True
+                except StopIteration:
+                    self.logged_in = False
+                    return False
         except FileNotFoundError:
             return False
 
     def _cache_headers(self):
         with open(PyGram.HEADERS_CACHE_FILE, 'w') as output_file:
-            json.dump(self.headers, output_file)
+            cache = {'user': self.user, 'headers': self.headers}
+            json.dump(cache, output_file)
+
+    def _assert_logged_in(self):
+        if not self.logged_in:
+            raise NotLoggedInError
+
+    def _get_user_list(self, user, query_hash, limit):
+        self._assert_logged_in()
+
+        user_id = self.get_user_id(user)
+        variables = {
+            'id': user_id,
+            'include_reel': False,
+            'fetch_mutual': False
+        }
+
+        items = self._get_items(query_hash, variables, limit)
+        yield from clean_dicts(items, [
+            'id', 'username', 'full_name', 'profile_pic_url', 'is_private',
+            'is_verified'
+        ])
 
     def _get_items(self, query_hash, variables, limit):
         variables['first'] = limit if limit and limit < 50 else 50
@@ -172,7 +203,7 @@ class PyGram:
         while has_next_page and not done:
             stringified_variables = stringify(variables)
             url = f"{PyGram._endpoints['graphql']}?query_hash={query_hash}&variables={stringified_variables}"
-            data = requests.get(url, headers=self.headers).json()['data']
+            data = get_json_from_url(url, 'get', headers=self.headers)['data']
             for i in range(2):
                 data = data[list(data.keys())[0]]
 
@@ -190,27 +221,10 @@ class PyGram:
             variables['after'] = page_info['end_cursor']
             time.sleep(self.sleep_seconds_between_iterative_requests)
 
-    def _get_user_list(self, user, query_hash, limit):
-        if not self.logged_in:
-            raise NotLoggedInError
-
-        user_id = self.get_user_id(user)
-        variables = {
-            'id': user_id,
-            'include_reel': False,
-            'fetch_mutual': False
-        }
-
-        items = self._get_items(query_hash, variables, limit)
-        yield from clean_dicts(items, [
-            'id', 'username', 'full_name', 'profile_pic_url', 'is_private',
-            'is_verified'
-        ])
-
     def _manage_like(self, content_type, item, action):
         item_id = item['id']
         if content_type == 'post':
             url = f"{PyGram._endpoints['web']}likes/{item_id}/{action}/"
         elif content_type == 'comment':
             url = f"{PyGram._endpoints['web']}comments/{action}/{item_id}/"
-        requests.post(url, headers=self.headers).json()
+        get_json_from_url(url, 'post', headers=self.headers)
