@@ -1,5 +1,22 @@
-# pygram
-An unofficial Instagram SDK for Python
+<h1 align="center">
+<b>pygram</b>
+</h1>
+
+<h3 align="center">
+<b>An unofficial Instagram SDK for Python</b>
+</h3>
+
+<p align="center">
+    <a href="https://pypi.python.org/pypi/pygram/"><img alt="Downloads" src="https://img.shields.io/pypi/dm/pygram.svg?style=flat-square"></a>
+    <a href="https://pypi.python.org/pypi/pygram/"><img alt="PyPi" src="https://img.shields.io/pypi/v/pygram.svg?style=flat-square"></a>
+    <!--<a href="https://github.com/brunneis/pygram/releases"><img alt="GitHub releases" src="https://img.shields.io/github/release/brunneis/pygram.svg?style=flat-square"></a>-->
+    <a href="https://github.com/brunneis/pygram/blob/master/LICENSE"><img alt="License" src="https://img.shields.io/github/license/brunneis/pygram.svg?style=flat-square&color=blue"></a>
+</p>
+
+<p align="center">
+    <a href="https://www.buymeacoffee.com/brunneis" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="35px"></a>
+</p>
+
 
 ## Installation
 ```bash
