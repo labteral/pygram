@@ -57,9 +57,9 @@ pygram = PyGram('user', 'password')
 from pygram import PyGram
 pygram = PyGram('user', 'password')
 
-usernames = pygram.get_followers('eminem', limit=10)
-for username in usernames:
-    print(username)
+users = pygram.get_followers('eminem', limit=10)
+for user in users:
+    print(user)
 ```
 
 ### Get users followed by a user
@@ -67,9 +67,9 @@ for username in usernames:
 from pygram import PyGram
 pygram = PyGram('user', 'password')
 
-usernames = pygram.get_followed('drdre', limit=10)
-for username in usernames:
-    print(username)
+users = pygram.get_followed('drdre', limit=10)
+for user in users:
+    print(user)
 ```
 
 ### Like a post / comment

@@ -3,4 +3,4 @@
 
 from .pygram import *
 
-__version__ = '0.0.2b0'
+__version__ = '0.0.3b0'

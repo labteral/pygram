@@ -6,6 +6,6 @@ from pygram import PyGram
 
 pygram = PyGram('user', 'password')
 
-usernames = pygram.get_followers('eminem', limit=10)
-for username in usernames:
-    print(username)
+users = pygram.get_followers('eminem', limit=10)
+for user in users:
+    print(user)
