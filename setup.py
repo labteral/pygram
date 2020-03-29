@@ -26,4 +26,4 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     python_requires=">=3.6",
-    install_requires=[''])  # Dependencies
+    install_requires=['requests'])  # Dependencies
