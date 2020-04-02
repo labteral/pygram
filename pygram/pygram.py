@@ -5,10 +5,8 @@ import requests
 import json
 import time
 
-from .helper import (get_json_from_url, stringify, clean_dict, clean_dicts,
-                     is_a_post)
-from .errors import (NotLoggedInError, AuthenticationError, NotSupportedError,
-                     UnknownError)
+from .helper import (get_json_from_url, stringify, clean_dict, clean_dicts, is_a_post)
+from .errors import (NotLoggedInError, AuthenticationError, NotSupportedError, UnknownError)
 
 
 class PyGram:
@@ -20,10 +18,7 @@ class PyGram:
         'graphql': 'https://www.instagram.com/graphql/query/',
     }
 
-    def __init__(self,
-                 user=None,
-                 password=None,
-                 sleep_seconds_between_iterative_requests=0):
+    def __init__(self, user=None, password=None, sleep_seconds_between_iterative_requests=0):
         self.user = user
         self.sleep_seconds_between_iterative_requests = sleep_seconds_between_iterative_requests
         self.known_user_ids = {}
@@ -51,7 +46,7 @@ class PyGram:
             publication_id = publication['post_id']
             data['replied_to_comment_id'] = publication['id']
         url = f"{PyGram._endpoints['web']}comments/{publication_id}/add/"
-        get_json_from_url(url, 'post', data=data, headers=self.headers)
+        return get_json_from_url(url, 'post', data=data, headers=self.headers)
 
     def delete(self, publication):
         if is_a_post(publication):
@@ -62,7 +57,7 @@ class PyGram:
             publication_id = publication['post_id']
             comment_id = f"{publication['id']}/"
         url = f"{PyGram._endpoints['web']}comments/{publication_id}/delete/{comment_id}"
-        get_json_from_url(url, 'post', headers=self.headers)
+        return get_json_from_url(url, 'post', headers=self.headers)
 
     def get_user_id(self, user):
         if user in self.known_user_ids:
@@ -77,20 +72,17 @@ class PyGram:
         url = f'https://www.instagram.com/{user}/?__a=1'
         profile = get_json_from_url(url, 'get')['graphql']['user']
         cleaned_profile = clean_dict(profile, [
-            'id', 'username', 'full_name', 'profile_pic_url',
-            'profile_pic_url_hd', 'is_private', 'is_verified', 'biography',
-            'external_url', ('followers_count', ['edge_followed_by', 'count']),
-            ('followed_count', ['edge_follow', 'count']), 'is_business_account',
-            'business_category_name', 'category_id', 'is_joined_recently',
-            'overall_category_name', 'connected_fb_page'
+            'id', 'username', 'full_name', 'profile_pic_url', 'profile_pic_url_hd', 'is_private', 'is_verified',
+            'biography', 'external_url', ('followers_count', ['edge_followed_by', 'count']),
+            ('followed_count', ['edge_follow', 'count']), 'is_business_account', 'business_category_name',
+            'category_id', 'is_joined_recently', 'overall_category_name', 'connected_fb_page'
         ])
         return cleaned_profile
 
     def get_posts(self, user, limit=0):
         user_id = self.get_user_id(user)
         variables = {'id': user_id}
-        items = self._get_items('472f257a40c653c64c666ce877d59d2b', variables,
-                                limit)
+        items = self._get_items('472f257a40c653c64c666ce877d59d2b', variables, limit)
         yield from clean_dicts(items, [
             'id',
             'shortcode',
@@ -110,48 +102,41 @@ class PyGram:
 
     def get_comments(self, publication, limit=0):
         variables = {'shortcode': publication['shortcode']}
-        items = self._get_items('33ba35852cb50da46f5b5e889df7d159', variables,
-                                limit)
-        for item in clean_dicts(items, [
-                'id', 'text', ('timestamp', 'created_at'),
-            ('author', ['owner', 'username'])
-        ]):
+        items = self._get_items('33ba35852cb50da46f5b5e889df7d159', variables, limit)
+        for item in clean_dicts(items, ['id', 'text', ('timestamp', 'created_at'), ('author', ['owner', 'username'])]):
             item['post_id'] = publication['id']
             yield item
 
     def get_followed(self, user, limit=0):
-        yield from self._get_user_list(user, 'd04b0a864b4b54837c0d870b0e77e076',
-                                       limit)
+        yield from self._get_user_list(user, 'd04b0a864b4b54837c0d870b0e77e076', limit)
 
     def get_followers(self, user, limit=0):
-        yield from self._get_user_list(user, 'c76146de99bb02f6415203be841dd25a',
-                                       limit)
+        yield from self._get_user_list(user, 'c76146de99bb02f6415203be841dd25a', limit)
 
     def _login(self, user, password):
         if self._load_cached_headers():
             return
 
-        session = requests.Session()
-        session.headers = {'cookie': 'ig_cb=1'}
-        request = session.get('https://www.instagram.com/web/__mid/')
+        headers = {'cookie': 'ig_cb=1'}
+        request = requests.get('https://www.instagram.com/', headers=headers)
         cookies = request.cookies.get_dict(domain='.instagram.com')
-        session.headers.update({'x-csrftoken': cookies['csrftoken']})
+        headers.update({'x-csrftoken': cookies['csrftoken']})
         data = {'username': user, 'password': password}
-        request = session.post('https://www.instagram.com/accounts/login/ajax/',
-                               data=data,
-                               allow_redirects=True)
-        cookies = request.cookies.get_dict(domain='.instagram.com')
-        try:
-            self.headers = {
-                'x-csrftoken':
-                cookies['csrftoken'],
-                'cookie':
-                f"csrftoken={cookies['csrftoken']};sessionid={cookies['sessionid']}",
-            }
-            self._cache_headers()
-            self.logged_in = True
-        except KeyError:
+
+        request = requests.post('https://www.instagram.com/accounts/login/ajax/', data=data, headers=headers)
+        if request.status_code != 200:
             raise AuthenticationError
+
+        cookies = request.cookies.get_dict(domain='.instagram.com')
+        if 'sessionid' not in cookies or 'csrftoken' not in cookies:
+            raise AuthenticationError
+
+        self.headers = {
+            'x-csrftoken': cookies['csrftoken'],
+            'cookie': f"csrftoken={cookies['csrftoken']};sessionid={cookies['sessionid']}",
+        }
+        self._cache_headers()
+        self.logged_in = True
 
     def _load_cached_headers(self):
         try:
@@ -183,17 +168,10 @@ class PyGram:
         self._assert_logged_in()
 
         user_id = self.get_user_id(user)
-        variables = {
-            'id': user_id,
-            'include_reel': False,
-            'fetch_mutual': False
-        }
+        variables = {'id': user_id, 'include_reel': False, 'fetch_mutual': False}
 
         items = self._get_items(query_hash, variables, limit)
-        yield from clean_dicts(items, [
-            'id', 'username', 'full_name', 'profile_pic_url', 'is_private',
-            'is_verified'
-        ])
+        yield from clean_dicts(items, ['id', 'username', 'full_name', 'profile_pic_url', 'is_private', 'is_verified'])
 
     def _get_items(self, query_hash, variables, limit):
         variables['first'] = limit if limit and limit < 50 else 50
@@ -227,4 +205,4 @@ class PyGram:
             url = f"{PyGram._endpoints['web']}likes/{item_id}/{action}/"
         elif content_type == 'comment':
             url = f"{PyGram._endpoints['web']}comments/{action}/{item_id}/"
-        get_json_from_url(url, 'post', headers=self.headers)
+        return get_json_from_url(url, 'post', headers=self.headers)
