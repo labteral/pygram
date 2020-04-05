@@ -4,9 +4,9 @@
 import requests
 import json
 import time
-
+from random import randint
 from .helper import (get_json_from_url, stringify, clean_dict, clean_dicts, is_a_post)
-from .errors import (NotLoggedInError, AuthenticationError, NotSupportedError, UnknownError)
+from .errors import (NotLoggedInError, AuthenticationError, NotSupportedError, UnknownError, ActionError)
 
 
 class PyGram:
@@ -18,9 +18,9 @@ class PyGram:
         'graphql': 'https://www.instagram.com/graphql/query/',
     }
 
-    def __init__(self, user=None, password=None, sleep_seconds_between_iterative_requests=0):
+    def __init__(self, user=None, password=None, seconds_between_iterations=None):
         self.user = user
-        self.sleep_seconds_between_iterative_requests = sleep_seconds_between_iterative_requests
+        self.seconds_between_iterations = seconds_between_iterations
         self.known_user_ids = {}
         self.logged_in = False
         self.headers = None
@@ -70,7 +70,12 @@ class PyGram:
     @staticmethod
     def get_profile(user):
         url = f'https://www.instagram.com/{user}/?__a=1'
-        profile = get_json_from_url(url, 'get')['graphql']['user']
+        method = 'get'
+        try:
+            profile = get_json_from_url(url, method)['graphql']['user']
+        except KeyError:
+            raise ActionError(f'[{method.upper()}] {url}')
+
         cleaned_profile = clean_dict(profile, [
             'id', 'username', 'full_name', 'profile_pic_url', 'profile_pic_url_hd', 'is_private', 'is_verified',
             'biography', 'external_url', ('followers_count', ['edge_followed_by', 'count']),
@@ -181,7 +186,12 @@ class PyGram:
         while has_next_page and not done:
             stringified_variables = stringify(variables)
             url = f"{PyGram._endpoints['graphql']}?query_hash={query_hash}&variables={stringified_variables}"
-            data = get_json_from_url(url, 'get', headers=self.headers)['data']
+            method = 'get'
+            try:
+                data = get_json_from_url(url, method, headers=self.headers)['data']
+            except KeyError:
+                raise ActionError(f'[{method.upper()}] {url}')
+
             for i in range(2):
                 data = data[list(data.keys())[0]]
 
@@ -197,7 +207,12 @@ class PyGram:
 
             has_next_page = page_info['has_next_page']
             variables['after'] = page_info['end_cursor']
-            time.sleep(self.sleep_seconds_between_iterative_requests)
+
+            if self.seconds_between_iterations is None:
+                seconds_between_iterations = randint(1, 5)
+            else:
+                seconds_between_iterations = self.seconds_between_iterations
+            time.sleep(seconds_between_iterations)
 
     def _manage_like(self, content_type, item, action):
         item_id = item['id']
