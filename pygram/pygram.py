@@ -20,13 +20,14 @@ class PyGram:
 
     def __init__(self, user=None, password=None, seconds_between_iterations=None):
         self.user = user
+        self.password = password
         self.seconds_between_iterations = seconds_between_iterations
+
         self.known_user_ids = {}
         self.logged_in = False
         self.headers = None
 
-        if user and password:
-            self._login(user, password)
+        self._login()
 
     def like(self, publication):
         if is_a_post(publication):
@@ -46,7 +47,7 @@ class PyGram:
             publication_id = publication['post_id']
             data['replied_to_comment_id'] = publication['id']
         url = f"{PyGram._endpoints['web']}comments/{publication_id}/add/"
-        return get_json_from_url(url, 'post', data=data, headers=self.headers)
+        return self._execute_logged_request(url, 'post', data=data)
 
     def delete(self, publication):
         if is_a_post(publication):
@@ -57,7 +58,7 @@ class PyGram:
             publication_id = publication['post_id']
             comment_id = f"{publication['id']}/"
         url = f"{PyGram._endpoints['web']}comments/{publication_id}/delete/{comment_id}"
-        return get_json_from_url(url, 'post', headers=self.headers)
+        return self._execute_logged_request(url, 'post')
 
     def get_user_id(self, user):
         if user in self.known_user_ids:
@@ -118,15 +119,15 @@ class PyGram:
     def get_followers(self, user, limit=0):
         yield from self._get_user_list(user, 'c76146de99bb02f6415203be841dd25a', limit)
 
-    def _login(self, user, password):
-        if self._load_cached_headers():
+    def _login(self, force=False):
+        if not force and self._load_cached_headers():
             return
 
         headers = {'cookie': 'ig_cb=1'}
         request = requests.get('https://www.instagram.com/', headers=headers)
         cookies = request.cookies.get_dict(domain='.instagram.com')
         headers.update({'x-csrftoken': cookies['csrftoken']})
-        data = {'username': user, 'password': password}
+        data = {'username': self.user, 'password': self.password}
 
         request = requests.post('https://www.instagram.com/accounts/login/ajax/', data=data, headers=headers)
         if request.status_code != 200:
@@ -175,10 +176,10 @@ class PyGram:
         user_id = self.get_user_id(user)
         variables = {'id': user_id, 'include_reel': False, 'fetch_mutual': False}
 
-        items = self._get_items(query_hash, variables, limit)
+        items = self._get_items(query_hash, variables, limit, logged_request=True)
         yield from clean_dicts(items, ['id', 'username', 'full_name', 'profile_pic_url', 'is_private', 'is_verified'])
 
-    def _get_items(self, query_hash, variables, limit):
+    def _get_items(self, query_hash, variables, limit, logged_request=False):
         variables['first'] = limit if limit and limit < 50 else 50
         yielded_items = 0
         has_next_page = True
@@ -188,7 +189,10 @@ class PyGram:
             url = f"{PyGram._endpoints['graphql']}?query_hash={query_hash}&variables={stringified_variables}"
             method = 'get'
             try:
-                data = get_json_from_url(url, method, headers=self.headers)['data']
+                if logged_request:
+                    data = self._execute_logged_request(url, method)['data']
+                else:
+                    data = get_json_from_url(url, method)['data']
             except KeyError:
                 raise ActionError(f'[{method.upper()}] {url}')
 
@@ -220,4 +224,12 @@ class PyGram:
             url = f"{PyGram._endpoints['web']}likes/{item_id}/{action}/"
         elif content_type == 'comment':
             url = f"{PyGram._endpoints['web']}comments/{action}/{item_id}/"
-        return get_json_from_url(url, 'post', headers=self.headers)
+        return self._execute_logged_request(url, 'post')
+
+    def _execute_logged_request(self, url, method, data=None):
+        try:
+            result = get_json_from_url(url, method, data=data, headers=self.headers)
+        except ActionError:
+            self._login(force=True)
+            result = get_json_from_url(url, method, data=data, headers=self.headers)
+        return result

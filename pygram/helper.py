@@ -7,13 +7,13 @@ from .errors import ActionError
 
 def get_json_from_url(url, method, data=None, headers=None):
     try:
-        result = getattr(requests, method)(url, data=data, headers=headers)
-        result_dict = result.json()
-        if method == 'post' and result_dict['status'] != 'ok':
-            raise ActionError(f'[{method.upper()}] {url}')
-        return result_dict
+        response = getattr(requests, method)(url, data=data, headers=headers)
+        response_dict = response.json()
+        if method == 'post' and response_dict['status'] != 'ok':
+            raise ActionError(f'[{method.upper()}] [HTTP {response.status_code}] {url}')
+        return response_dict
     except json.decoder.JSONDecodeError:
-        raise ActionError(f'[{method.upper()}] {url}')
+        raise ActionError(f'[{method.upper()}] [HTTP {response.status_code}] {url}')
 
 
 def stringify(input_dict):
