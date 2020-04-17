@@ -7,10 +7,10 @@
 </h3>
 
 <p align="center">
-    <a href="https://pypi.python.org/pypi/pygram/"><img alt="Downloads" src="https://img.shields.io/pypi/dm/pygram.svg?style=flat-square"></a>
+    <a href="https://pepy.tech/project/pygram/"><img alt="Downloads" src="https://img.shields.io/badge/dynamic/json?style=flat-square&maxAge=3600&label=downloads&query=$.total_downloads&url=https://api.pepy.tech/api/projects/pygram"></a>
     <a href="https://pypi.python.org/pypi/pygram/"><img alt="PyPi" src="https://img.shields.io/pypi/v/pygram.svg?style=flat-square"></a>
     <!--<a href="https://github.com/brunneis/pygram/releases"><img alt="GitHub releases" src="https://img.shields.io/github/release/brunneis/pygram.svg?style=flat-square"></a>-->
-    <a href="https://github.com/brunneis/pygram/blob/master/LICENSE"><img alt="License" src="https://img.shields.io/github/license/brunneis/pygram.svg?style=flat-square&color=blue"></a>
+    <a href="https://github.com/brunneis/pygram/blob/master/LICENSE"><img alt="License" src="https://img.shields.io/github/license/brunneis/pygram.svg?style=flat-square&color=green"></a>
 </p>
 
 <p align="center">
