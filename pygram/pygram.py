@@ -152,10 +152,10 @@ class PyGram:
                     return False
                 self.headers = cache['headers']
                 try:
-                    self.logged_in = True
+                    self.logged_in = True # So get_followers does not fail
                     next(self.get_followers('instagram', limit=1))
                     return True
-                except StopIteration:
+                except ActionError:
                     self.logged_in = False
                     return False
         except FileNotFoundError:
