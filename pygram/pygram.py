@@ -25,7 +25,7 @@ class PyGram:
 
         self.known_user_ids = {}
         self.logged_in = False
-        self.headers = None
+        self.headers = {}
 
         self._login()
 
@@ -64,12 +64,11 @@ class PyGram:
         if user in self.known_user_ids:
             user_id = self.known_user_ids[user]
         else:
-            user_id = PyGram.get_profile(user)['id']
+            user_id = self.get_profile(user)['id']
             self.known_user_ids[user] = user_id
         return user_id
 
-    @staticmethod
-    def get_profile(user):
+    def get_profile(self, user):
         url = f'https://www.instagram.com/{user}/?__a=1'
         method = 'get'
         try:
@@ -120,7 +119,8 @@ class PyGram:
         yield from self._get_user_list(user, 'c76146de99bb02f6415203be841dd25a', limit)
 
     def _login(self, force=False):
-        if not force and self._load_cached_headers():
+        self._load_cached_headers()
+        if self.logged_in and not force:
             return
 
         headers = {'cookie': 'ig_cb=1'}
@@ -137,10 +137,10 @@ class PyGram:
         if 'sessionid' not in cookies or 'csrftoken' not in cookies:
             raise AuthenticationError
 
-        self.headers = {
+        self.headers.update({
             'x-csrftoken': cookies['csrftoken'],
             'cookie': f"csrftoken={cookies['csrftoken']};sessionid={cookies['sessionid']}",
-        }
+        })
         self._cache_headers()
         self.logged_in = True
 
@@ -148,18 +148,12 @@ class PyGram:
         try:
             with open(PyGram.HEADERS_CACHE_FILE, 'r') as input_file:
                 cache = json.load(input_file)
-                if cache['user'] != self.user:
-                    return False
-                self.headers = cache['headers']
-                try:
-                    self.logged_in = True # So get_followers does not fail
-                    next(self.get_followers('instagram', limit=1))
-                    return True
-                except ActionError:
-                    self.logged_in = False
-                    return False
+                if cache['user'] == self.user:
+                    self.headers.update(cache['headers'])
+                    self.logged_in = True
+
         except FileNotFoundError:
-            return False
+            pass
 
     def _cache_headers(self):
         with open(PyGram.HEADERS_CACHE_FILE, 'w') as output_file:
@@ -184,7 +178,15 @@ class PyGram:
         yielded_items = 0
         has_next_page = True
         done = False
+
         while has_next_page and not done:
+            if yielded_items > 0:
+                if self.seconds_between_iterations is None:
+                    seconds_between_iterations = randint(1, 5)
+                else:
+                    seconds_between_iterations = self.seconds_between_iterations
+                time.sleep(seconds_between_iterations)
+
             stringified_variables = stringify(variables)
             url = f"{PyGram._endpoints['graphql']}?query_hash={query_hash}&variables={stringified_variables}"
             method = 'get'
@@ -193,6 +195,7 @@ class PyGram:
                     data = self._execute_logged_request(url, method)['data']
                 else:
                     data = get_json_from_url(url, method)['data']
+
             except KeyError:
                 raise ActionError(f'[{method.upper()}] {url}')
 
@@ -211,12 +214,6 @@ class PyGram:
 
             has_next_page = page_info['has_next_page']
             variables['after'] = page_info['end_cursor']
-
-            if self.seconds_between_iterations is None:
-                seconds_between_iterations = randint(1, 5)
-            else:
-                seconds_between_iterations = self.seconds_between_iterations
-            time.sleep(seconds_between_iterations)
 
     def _manage_like(self, content_type, item, action):
         item_id = item['id']
