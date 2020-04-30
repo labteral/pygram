@@ -72,7 +72,10 @@ class PyGram:
         url = f'https://www.instagram.com/{user}/?__a=1'
         method = 'get'
         try:
-            profile = get_json_from_url(url, method)['graphql']['user']
+            if self.logged_in:
+                profile = self._execute_logged_request(url, method)['graphql']['user']
+            else:
+                profile = get_json_from_url(url, method)['graphql']['user']
         except KeyError:
             raise ActionError(f'[{method.upper()}] {url}')
 
