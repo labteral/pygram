@@ -51,3 +51,7 @@ def clean_dicts(items, keys):
 
 def is_a_post(publication):
     return 'shortcode' in publication
+
+
+def get_timestamp():
+    return int(round(time.time()))

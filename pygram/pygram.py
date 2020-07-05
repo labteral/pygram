@@ -5,15 +5,14 @@ import requests
 import json
 import time
 from random import randint
-from .helper import (get_json_from_url, stringify, clean_dict, clean_dicts, is_a_post)
+from .helper import (get_json_from_url, stringify, clean_dict, clean_dicts, is_a_post, get_timestamp)
 from .errors import (NotLoggedInError, AuthenticationError, NotSupportedError, UnknownError, ActionError)
 
 
 class PyGram:
 
     HEADERS_CACHE_FILE = './pygram-cache.json'
-
-    _endpoints = {
+    INSTAGRAM_ENDPOINTS = {
         'web': 'https://www.instagram.com/web/',
         'graphql': 'https://www.instagram.com/graphql/query/',
     }
@@ -27,7 +26,8 @@ class PyGram:
         self.logged_in = False
         self.headers = {}
 
-        self._login()
+        if user:
+            self._login()
 
     def like(self, publication):
         if is_a_post(publication):
@@ -46,7 +46,7 @@ class PyGram:
         else:
             publication_id = publication['post_id']
             data['replied_to_comment_id'] = publication['id']
-        url = f"{PyGram._endpoints['web']}comments/{publication_id}/add/"
+        url = f"{PyGram.INSTAGRAM_ENDPOINTS['web']}comments/{publication_id}/add/"
         return self._execute_logged_request(url, 'post', data=data)
 
     def delete(self, publication):
@@ -57,7 +57,7 @@ class PyGram:
         else:
             publication_id = publication['post_id']
             comment_id = f"{publication['id']}/"
-        url = f"{PyGram._endpoints['web']}comments/{publication_id}/delete/{comment_id}"
+        url = f"{PyGram.INSTAGRAM_ENDPOINTS['web']}comments/{publication_id}/delete/{comment_id}"
         return self._execute_logged_request(url, 'post')
 
     def get_user_id(self, user):
@@ -127,21 +127,24 @@ class PyGram:
             return
 
         headers = {'cookie': 'ig_cb=1'}
-        request = requests.get('https://www.instagram.com/', headers=headers)
-        cookies = request.cookies.get_dict(domain='.instagram.com')
-        headers.update({'x-csrftoken': cookies['csrftoken']})
-        data = {'username': self.user, 'password': self.password}
+        response = requests.get('https://www.instagram.com/', headers=headers)
+        cookies = response.cookies.get_dict()
+        headers['x-csrftoken'] = cookies['csrftoken']
 
-        request = requests.post('https://www.instagram.com/accounts/login/ajax/', data=data, headers=headers)
-        if request.status_code != 200:
-            raise AuthenticationError
+        data = {'username': self.user, 'enc_password': f'#PWD_INSTAGRAM_BROWSER:0:{get_timestamp()}:{self.password}'}
+        response = requests.post('https://www.instagram.com/accounts/login/ajax/', data=data, headers=headers)
 
-        cookies = request.cookies.get_dict(domain='.instagram.com')
-        if 'sessionid' not in cookies or 'csrftoken' not in cookies:
-            raise AuthenticationError
+        if response.status_code != 200:
+            response_dict = json.loads(response.content)
+            if 'checkpoint_url' in response_dict:
+                raise SystemExit(f"login blocked, check: https://instagram.com{response_dict['checkpoint_url']}")
+            raise AuthenticationError(f'[HTTP {response.status_code}] {response_dict}')
+
+        cookies = response.cookies.get_dict()
+        if 'sessionid' not in cookies:
+            raise AuthenticationError('could not obtain sessionid')
 
         self.headers.update({
-            'x-csrftoken': cookies['csrftoken'],
             'cookie': f"csrftoken={cookies['csrftoken']};sessionid={cookies['sessionid']}",
         })
         self._cache_headers()
@@ -191,7 +194,7 @@ class PyGram:
                 time.sleep(seconds_between_iterations)
 
             stringified_variables = stringify(variables)
-            url = f"{PyGram._endpoints['graphql']}?query_hash={query_hash}&variables={stringified_variables}"
+            url = f"{PyGram.INSTAGRAM_ENDPOINTS['graphql']}?query_hash={query_hash}&variables={stringified_variables}"
             method = 'get'
             try:
                 if logged_request:
@@ -221,9 +224,9 @@ class PyGram:
     def _manage_like(self, content_type, item, action):
         item_id = item['id']
         if content_type == 'post':
-            url = f"{PyGram._endpoints['web']}likes/{item_id}/{action}/"
+            url = f"{PyGram.INSTAGRAM_ENDPOINTS['web']}likes/{item_id}/{action}/"
         elif content_type == 'comment':
-            url = f"{PyGram._endpoints['web']}comments/{action}/{item_id}/"
+            url = f"{PyGram.INSTAGRAM_ENDPOINTS['web']}comments/{action}/{item_id}/"
         return self._execute_logged_request(url, 'post')
 
     def _execute_logged_request(self, url, method, data=None):
