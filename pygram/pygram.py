@@ -122,7 +122,7 @@ class PyGram:
         yield from self._get_user_list(user, 'c76146de99bb02f6415203be841dd25a', limit)
 
     def _login(self, force=False):
-        self._load_cached_headers()
+        self._login_with_cached_headers()
         if self.logged_in and not force:
             return
 
@@ -150,21 +150,24 @@ class PyGram:
         self._cache_headers()
         self.logged_in = True
 
-    def _load_cached_headers(self):
+    def _get_cached_headers(self):
         try:
             with open(PyGram.HEADERS_CACHE_FILE, 'r') as input_file:
-                cache = json.load(input_file)
-                if cache['user'] == self.user:
-                    self.headers.update(cache['headers'])
-                    self.logged_in = True
+                return json.load(input_file)
+        except (FileNotFoundError, json.decoder.JSONDecodeError):
+            return {}
 
-        except FileNotFoundError:
-            pass
+    def _login_with_cached_headers(self):
+        cached_headers = self._get_cached_headers()
+        if self.user in cached_headers:
+            self.headers.update(cached_headers[self.user])
+            self.logged_in = True
 
     def _cache_headers(self):
+        cached_headers = self._get_cached_headers()
         with open(PyGram.HEADERS_CACHE_FILE, 'w') as output_file:
-            cache = {'user': self.user, 'headers': self.headers}
-            json.dump(cache, output_file)
+            cached_headers[self.user] = self.headers
+            json.dump(cached_headers, output_file)
 
     def _assert_logged_in(self):
         if not self.logged_in:
