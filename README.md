@@ -1,20 +1,20 @@
-<h1 align="center">
-<b>pygram</b>
-</h1>
+<p align="center">
+<img src="misc/pygram.svg" alt="Pygram Logo" width="150"/></a>
+</p>
+
+<p align="center">
+    <a href="https://pepy.tech/project/pygram/"><img alt="Downloads" src="https://img.shields.io/badge/dynamic/json?style=flat-square&maxAge=3600&label=downloads&query=$.total_downloads&url=https://api.pepy.tech/api/projects/pygram"></a>
+    <a href="https://pypi.python.org/pypi/pygram/"><img alt="PyPi" src="https://img.shields.io/pypi/v/pygram.svg?style=flat-square"></a>
+    <!--<a href="https://github.com/labteral/pygram/releases"><img alt="GitHub releases" src="https://img.shields.io/github/release/labteral/pygram.svg?style=flat-square"></a>-->
+    <a href="https://github.com/labteral/pygram/blob/master/LICENSE"><img alt="License" src="https://img.shields.io/github/license/labteral/pygram.svg?style=flat-square&color=green"></a>
+</p>
 
 <h3 align="center">
 <b>Unofficial Python client for Instagram</b>
 </h3>
 
 <p align="center">
-    <a href="https://pepy.tech/project/pygram/"><img alt="Downloads" src="https://img.shields.io/badge/dynamic/json?style=flat-square&maxAge=3600&label=downloads&query=$.total_downloads&url=https://api.pepy.tech/api/projects/pygram"></a>
-    <a href="https://pypi.python.org/pypi/pygram/"><img alt="PyPi" src="https://img.shields.io/pypi/v/pygram.svg?style=flat-square"></a>
-    <!--<a href="https://github.com/brunneis/pygram/releases"><img alt="GitHub releases" src="https://img.shields.io/github/release/brunneis/pygram.svg?style=flat-square"></a>-->
-    <a href="https://github.com/brunneis/pygram/blob/master/LICENSE"><img alt="License" src="https://img.shields.io/github/license/brunneis/pygram.svg?style=flat-square&color=green"></a>
-</p>
-
-<p align="center">
-    <a href="https://www.buymeacoffee.com/brunneis" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="35px"></a>
+    <a href="https://www.buymeacoffee.com/labteral" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="35px"></a>
 </p>
 
 
