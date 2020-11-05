@@ -3,7 +3,7 @@
 </h1>
 
 <h3 align="center">
-<b>An unofficial Instagram SDK for Python</b>
+<b>Unofficial Python client for Instagram</b>
 </h3>
 
 <p align="center">
